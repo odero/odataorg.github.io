@@ -27,30 +27,12 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
-  # - task: NodeTool@0
-  #   inputs:
-  #     versionSpec: "16.x"
-  #   displayName: "Install Node v16"
-  # # Before running the Accessibility Insights task, add a pipeline task to build and serve your site.
-  # # The site in this example uses Create React App.
-  # # In the step below, the pipeline will download npm dependencies, run the `npm start` script with a trailing `&` to keep the local web server open for the next step.
-  # # Given your site's configuration, you will need to update this step:
-  # - script: |
-  #     npm ci
-  #     npm start &
-  #   workingDirectory: "$(System.DefaultWorkingDirectory)/localhost-sample/my-react-app"
   - bash: |
       sed -i "s|https://www.odata.org|http://localhost:8000|g" _config.yml && cat _config.yml
     displayName: "Use localhost url"
   - script: |
        docker run --rm -v $(pwd):/srv/jekyll -v $(pwd)/_site:/srv/jekyll/_site jekyll/builder:stable /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --config _config.yml --future"
     displayName: "Build Jekyll site"
-  # - task: UsePythonVersion@0
-  #   inputs:
-  #     versionSpec: '3.x'
-  # - bash: |
-  #     python -m http.server 8000 -d _site &
-  #   displayName: "Serve Jekyll site"
   - task: accessibility-insights.prod.task.accessibility-insights@3
     displayName: Scan for accessibility issues
     inputs:
