@@ -1,0 +1,62 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
+# This file defines an Azure Pipelines build, which you can configure on https://dev.azure.com
+# to run automatically with each Pull Request update and/or each commit to your repository.
+# In this example, we do not change the default "trigger" behavior, so this build gets run
+# for all commits/PRs to all branches of the repository.
+#
+# If you already have an Azure Pipelines build for your project, we recommend integrating
+# your new accessibility tests into it, rather than creating a separate pipeline. Pipelines
+# builds are usually defined in files like this one named "azure-pipelines.yml" or "build.yaml",
+# but some projects use different file names.
+#
+# If you are using an Azure Pipelines build with tasks configured using the GUI on https://dev.azure.com,
+# instead of a checked in YAML file, you can add the same tasks listed below from the GUI. However, we
+# strongly recommend switching to using a checked in YAML file.
+#
+#
+# If you *don't* already have an Azure Pipelines build, we recommend following Azure Pipelines'
+# documentation at https://docs.microsoft.com/en-us/azure/devops/pipelines/create-first-pipeline
+# (using this sample as your starter code).
+#
+# For more information, visit:
+# * https://docs.microsoft.com/en-us/azure/devops/pipelines/get-started
+# * https://docs.microsoft.com/en-us/azure/devops/pipelines/customize-pipeline
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  # - task: NodeTool@0
+  #   inputs:
+  #     versionSpec: "16.x"
+  #   displayName: "Install Node v16"
+  # # Before running the Accessibility Insights task, add a pipeline task to build and serve your site.
+  # # The site in this example uses Create React App.
+  # # In the step below, the pipeline will download npm dependencies, run the `npm start` script with a trailing `&` to keep the local web server open for the next step.
+  # # Given your site's configuration, you will need to update this step:
+  # - script: |
+  #     npm ci
+  #     npm start &
+  #   workingDirectory: "$(System.DefaultWorkingDirectory)/localhost-sample/my-react-app"
+  - bash: |
+      sed -i "s|https://www.odata.org|http://localhost:8000|g" _config.yml && cat _config.yml
+    displayName: "Use localhost url"
+  - script: |
+       docker run --rm -v $(pwd):/srv/jekyll -v $(pwd)/_site:/srv/jekyll/_site jekyll/builder:stable /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --config _config.yml --future"
+    displayName: "Build Jekyll site"
+  # - task: UsePythonVersion@0
+  #   inputs:
+  #     versionSpec: '3.x'
+  # - bash: |
+  #     python -m http.server 8000 -d _site &
+  #   displayName: "Serve Jekyll site"
+  - task: accessibility-insights.prod.task.accessibility-insights@3
+    displayName: Scan for accessibility issues
+    inputs:
+      # The example below is common for sites using Next.js static export option.
+      # You will need to update this step with the directory to your site:
+      staticSiteDir: "$(System.DefaultWorkingDirectory)/_site/" # Required. Directory containing the HTML files to be scanned
+      staticSiteUrlRelativePath: / # Optional. Set the base URL where the site lives at a subpath of the domain.
+      staticSitePort: 8000 # Optional. The preferred local website TCP port to use when serving local website content. If unspecified, a port will be set automatically.
+      scanTimeout: 1500000 # Optional. The maximum time in milliseconds to wait for the scan to complete. If unspecified, the default timeout is 300000 (5 minutes).
